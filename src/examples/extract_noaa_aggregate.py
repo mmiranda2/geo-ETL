@@ -1,8 +1,8 @@
 import s3fs
 import datetime
 from io import BytesIO
-from geoapi import GDALWarpFactory
-from api import Validator, Transformer, APISource, Transform, CLIBaseTransform, UnzipTransform
+from geoapi import GDALWarpFactory, LoadNetcdf
+from api import Validator, Transformer, FileNode, APISource, Transform, CLIBaseTransform, UnzipTransform, ApacheIndex
 
 
 class SimpleS3Bucket:
@@ -35,36 +35,32 @@ class S3Transform(Transform):
 
     bucket = None # SimpleS3Bucket() 
 
-    def transform(self):
+    def transform(self) -> FileNode:
         destination_filepath = 'my_s3_folder/path/mrms.nc.gz'
         bucket.put(self.source_filepath, destination_filepath)
         return FileNode(filepath=destination_filepath)
-    
-    def finalize(self):
-        if os.path.exists(self.source_filepath):
-            os.remove(self.source_filepath)
 
 
-class SimpleValidator(Validator):
+class NOAAValidator(Validator):
     def __init__(self):
         self.previous = []
 
-    def is_resp_valid(self, resp):
-        # Enforce GZip
-        if resp.headers['Content-Type'] != 'application/x-gzip':
-            return False
+    def is_valid(self, listing) -> bool:
         # Enforce <1MB
-        if int(resp.headers['Content-Length']) > 10**6:
-            return False
-        # Enforce fresh file
-        if resp.headers['Last-Modified'] == self.previous:
+        if int(listing.size) > 2*10**6:
+            print('oversize')
             return False
         # Enforce date in sync
-        if datetime.datetime.utcnow().strftime('%d %b') not in resp.headers['Last-Modified']:
+        dt = datetime.datetime.utcnow()
+        month, day = dt.month, dt.day
+        if month != listing.modified.tm_mon and day != listing.modified.tm_mday:
+            print('not today')
             return False
-
-        self.previous.append(resp.headers['Last-Modified'])
         return True
+
+
+def noaa_aggregator(a: FileNode, b: FileNode) -> FileNode:
+    return FileNode(in_memory=True, content=np.maximum(a.content, b.content))
 
 
 GDALWarpUngrib = GDALWarpFactory.make('GDALWarpUngrib')
@@ -72,8 +68,8 @@ ZipTransform = CLIBaseTransform.make(name='ZipTransform', executable='gzip', com
 
 
 if __name__ == '__main__':
-    simple_mrms = APISource(
-        url='https://mrms.ncep.noaa.gov/data/2D/MESH/MRMS_MESH.latest.grib2.gz',
-        validator=SimpleValidator(),
+    aggregated_node = ApacheIndex(
+        url='https://mrms.ncep.noaa.gov/data/2D/MESH',
+        validator=NOAAValidator(),
         transformer=Transformer(
-            transforms=[UnzipTransform, GDALWarpUngrib, ZipTransform])).transform()
+            transforms=[UnzipTransform, GDALWarpUngrib, LoadNetcdf])).get_aggregate(noaa_aggregator)

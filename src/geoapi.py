@@ -57,11 +57,11 @@ class GDALWarpFactory:
 
 
 class LoadNetcdf(Transform):
-    def __init__(self, node: FileNode):
-        super(LoadNetcdf, self).__init__(node)
+    def __init__(self, *args, **kwargs):
+        super(LoadNetcdf, self).__init__(*args, **kwargs)
     
     def transform(self):
-        source_nc = xr.open_dataset(self.source_filepath)
+        source_nc = xr.open_dataset(self.source_filepath, engine='netcdf4')
         source_np = np.array(source_nc.Band1.values[:,:])
         source_np[source_np < 0] = 0
         source_np = source_np.astype(np.uint8)
