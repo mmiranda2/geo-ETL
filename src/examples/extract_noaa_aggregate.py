@@ -1,5 +1,6 @@
 import s3fs
 import datetime
+import numpy as np
 from io import BytesIO
 from geoapi import GDALWarpFactory, LoadNetcdf
 from api import Validator, Transformer, FileNode, APISource, Transform, CLIBaseTransform, UnzipTransform, ApacheIndex
