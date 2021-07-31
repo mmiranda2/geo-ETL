@@ -144,7 +144,7 @@ class Transformer:
         return reduce(lambda node, T: self.apply(node, T), [root] + self.transforms)
      
     def apply(self, node, T) -> FileNode:
-        print(T)
+        print('Applying ' + T.__name__)
         initial = T(node, self.debug)                   # Transform object
         output_file_node = initial.transform()          # FileNode object
         if self.remove_source:

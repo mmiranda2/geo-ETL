@@ -21,8 +21,10 @@ def is_zip_transformer_correct():
         output_value = f.read()
     
     output_node.truncate()
-    
-    return initial_value == output_value
+    is_correct = initial_value == output_value
+
+    print('Zip transformer correct? ' + str(is_correct))
+    return is_correct
 
 
 def test_zip_transformer():

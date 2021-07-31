@@ -15,6 +15,7 @@ setup(
     ],
     install_requires=[
         "htmllistparse",
+        "netcdf4",
         "numpy",
         "requests",
         "s3fs",
