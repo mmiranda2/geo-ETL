@@ -1,9 +1,10 @@
+import sys
 import s3fs
 import datetime
 import numpy as np
 from io import BytesIO
-from geoapi import GDALWarpFactory, LoadNetcdf
-from api import Validator, Transformer, FileNode, APISource, Transform, CLIBaseTransform, UnzipTransform, ApacheIndex
+from geoetl.geoapi import GDALWarpFactory, LoadNetcdf
+from geoetl.api import Validator, Transformer, FileNode, APISource, Transform, CLIBaseTransform, UnzipTransform, ApacheIndex
 
 
 class SimpleS3Bucket:
@@ -68,9 +69,15 @@ GDALWarpUngrib = GDALWarpFactory.make('GDALWarpUngrib')
 ZipTransform = CLIBaseTransform.make(name='ZipTransform', executable='gzip', command='gzip -c {source} > {destination}')
 
 
-if __name__ == '__main__':
+def main():
     aggregated_node = ApacheIndex(
         url='https://mrms.ncep.noaa.gov/data/2D/MESH',
         validator=NOAAValidator(),
         transformer=Transformer(
             transforms=[UnzipTransform, GDALWarpUngrib, LoadNetcdf])).get_aggregate(noaa_aggregator)
+    
+    print('Output filepath: ' + aggregated_node.filepath)
+
+
+if __name__ == '__main__':
+    sys.exit(main())

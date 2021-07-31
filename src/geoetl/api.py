@@ -5,7 +5,7 @@ from io import BytesIO
 from functools import reduce
 from typing import List, Dict, Type
 from collections.abc import Callable
-from utils import xor, get_temp_file
+from .utils import xor, get_temp_file
 
 
 class Validator:
@@ -239,3 +239,29 @@ class ApacheIndex(Index):
     def get_aggregate(self, aggregator):
         self.fetch_listings()
         return self.aggregate(aggregator)
+
+
+class SimpleS3Bucket:
+    def __init__(self, bucket):
+        self.s3 = s3fs.S3FileSystem(anon=False)
+        self.bucket = bucket
+        if self.bucket[-1] != '/':
+            self.bucket += '/'
+    
+    def get(self, source_filepath, destination_filepath):
+        with self.s3.open(bucket + source_filepath, 'rb') as s:
+            with open(destination_filepath, 'wb') as f:
+                f.write(s.read())
+
+    def get_obj(self, source_filepath):
+        with self.s3.open(bucket + source_filepath, 'rb') as s:
+            return BytesIO(s.read())
+
+    def put(self, source_filepath, destination_filepath):
+        with self.s3.open(bucket + destination_filepath, 'wb') as f:
+            with open(source_filepath, 'rb') as s:
+                f.write(s.read())
+    
+    def put_obj(self, source_content, destination_filepath):
+        with self.s3.open(bucket + destination_filepath, 'wb') as f:
+            f.write(source_content.getvalue())

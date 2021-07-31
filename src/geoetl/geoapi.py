@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import xarray as xr
-from api import Transform, FileNode, CLIBaseTransform
+from .api import Transform, FileNode, CLIBaseTransform
 from typing import List, Dict, Type
 
 
