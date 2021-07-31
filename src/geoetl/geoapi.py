@@ -1,8 +1,19 @@
 import os
+import json
 import numpy as np
 import xarray as xr
-from .api import Transform, FileNode, CLIBaseTransform
 from typing import List, Dict, Type
+from .api import Transform, FileNode, CLIBaseTransform
+from .utils import get_temp_file
+
+
+def gdalinfo(filepath: str) -> Dict:
+    dest_fp = get_temp_file()
+    os.system(f'gdalinfo -json {filepath} > {dest_fp}')
+    with open(dest_fp, 'r') as f:
+        file_gdalinfo = json.load(f)
+    os.remove(dest_fp)
+    return file_gdalinfo
 
 
 class GDALWarpBase(CLIBaseTransform):
@@ -11,21 +22,12 @@ class GDALWarpBase(CLIBaseTransform):
 
     def __init__(self, *args, **kwargs):
         super(GDALWarpBase, self).__init__(*args, **kwargs)
-    
-    @staticmethod
-    def check_installation() -> bool:
-        cmd = os.system(f'gdalwarp --version')
-        exit_code = os.WEXITSTATUS(cmd)
-        if exit_code:
-            print(f'Gdalwarp binary not found, please install and put in PATH')
-            return False
-        return True
 
 
 class GDALWarpFactory:
 
     _process_mapping = {
-        'GDALWarpUngrib': ('gdalwarp_grib_to_nc', 'gdalwarp -t_srs EPSG:4326 -ot Int16 {source} {destination}')
+        'GDALWarpUngrib': ('gdalwarp_grib_to_nc', 'gdalwarp -t_srs EPSG:4326 -ot Int16 -of netCDF {source} {destination}')
     }
 
     @classmethod
@@ -50,10 +52,19 @@ class GDALWarpFactory:
             process, 
             (GDALWarpBase,),
             {'command': cls._process_mapping[process][1]})
-    
+
     @classmethod
     def list_all_funcs(cls) -> Dict[str, str]:
         return {k: v.__name__ for k, v in cls._process_mapping.items()}
+    
+    @staticmethod
+    def check_installation() -> bool:
+        cmd = os.system(f'gdalwarp --version')
+        exit_code = os.WEXITSTATUS(cmd)
+        if exit_code:
+            print(f'Gdalwarp binary not found, please install and put in PATH')
+            return False
+        return True
 
 
 class LoadNetcdf(Transform):

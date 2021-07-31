@@ -3,7 +3,7 @@ Basic ETL tools with support for geographic data. Made to incorporate GIS proces
 
 ### Usage
 - Make sure docker is installed
-- ./build.sh to put src into a small-ish 750mb Ubuntu image with python, GDAL, and most drivers installed
+- ./build.sh to put src into a ~2.5Gb Ubuntu image with python, GDAL, and most drivers installed
 - ./run.sh to open a shell in a new container
 - Within shell, run console commands as needed
 

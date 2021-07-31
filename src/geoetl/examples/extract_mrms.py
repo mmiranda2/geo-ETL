@@ -49,6 +49,7 @@ def main():
             transforms=[UnzipTransform, GDALWarpUngrib, ZipTransform])).transform()
 
     print('Output filepath: ' + simple_mrms.filepath)
+    return simple_mrms
 
 
 if __name__ == '__main__':

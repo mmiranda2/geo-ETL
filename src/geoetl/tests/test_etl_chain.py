@@ -1,10 +1,12 @@
 from io import BytesIO
+from geoetl.utils import test_decorator
 from geoetl.api import FileNode, Transformer, Transform, CLIBaseTransform, UnzipTransform
 
 
 ZipTransform = CLIBaseTransform.make(name='ZipTransform', executable='gzip', command='gzip -c {source} > {destination}')
 
 
+@test_decorator
 def is_zip_transformer_correct():
     transformer = Transformer(transforms=[ZipTransform, UnzipTransform])
     initial_value = b'asdfASDF123456789!@#$%^&*();'
@@ -21,11 +23,8 @@ def is_zip_transformer_correct():
         output_value = f.read()
     
     output_node.truncate()
-    is_correct = initial_value == output_value
-
-    print('Zip transformer correct? ' + str(is_correct))
-    return is_correct
+    return initial_value == output_value
 
 
-def test_zip_transformer():
-    assert is_zip_transformer_correct()
+def main():
+    return [is_zip_transformer_correct]

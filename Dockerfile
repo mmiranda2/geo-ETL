@@ -1,4 +1,4 @@
-FROM osgeo/gdal:ubuntu-small-latest
+FROM osgeo/gdal:ubuntu-full-latest
 
 RUN apt-get clean all
 RUN apt-get update
