@@ -37,11 +37,13 @@ class SimpleValidator(Validator):
         return True
 
 
-GDALWarpUngrib = GDALWarpFactory.make('GDALWarpUngrib')
-ZipTransform = CLIBaseTransform.make(name='ZipTransform', executable='gzip', command='gzip -c {source} > {destination}')
-
-
 def main():
+    '''
+    Call NOAA api, transform to gzipped netcdf
+    '''
+    GDALWarpUngrib = GDALWarpFactory.make('GDALWarpUngrib')
+    ZipTransform = CLIBaseTransform.make(name='ZipTransform', executable='gzip', command='gzip -c {source} > {destination}')
+
     simple_mrms = APISource(
         url='https://mrms.ncep.noaa.gov/data/2D/MESH/MRMS_MESH.latest.grib2.gz',
         validator=SimpleValidator(Application(None)),

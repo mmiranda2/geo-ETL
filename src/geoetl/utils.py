@@ -7,13 +7,12 @@ def xor(a, b):
     return bool(a) ^ bool(b)
 
 
-def get_temp_file():
-    try:
-        with tempfile.NamedTemporaryFile(delete=False, dir='/factory') as f:
-            return f.name
-    except:
-        with tempfile.NamedTemporaryFile(delete=False, dir='./') as f:
-            return f.name
+def get_temp_file(prefix=''):
+    etl_dir = os.environ.get('ETL_DIR', './')
+    with tempfile.NamedTemporaryFile(delete=False, dir=etl_dir) as f:
+        folder = '/'.join(f.name.split('/')[:-1])
+        filename = f.name.split('/')[-1]
+        return f'{folder}/{prefix}_{filename}'
 
 
 def timeit(f, *args, **kwargs):

@@ -19,11 +19,6 @@ class Validator:
         pass
 
 
-class Listing:
-    def __init__(self, url: str):
-        self.full_url
-
-
 class FileNode:
     '''
     FileNode objects are connected by transforms.
@@ -65,24 +60,14 @@ class Transform:
         self.source_content = node.content
         self.debug = debug
 
-        self.initialize()
-    
-    def initialize(self):
-        pass
-
     def transform(self):
         self.finalize()
 
     def finalize(self):
         pass
     
-    def get_temp_file(self):
-        if self.debug:
-            prefix = '/'.join(self.source_filepath.split('/')[:-1])
-            transform_name = type(self).__name__
-            filename = self.source_filepath.split('/')[-1]
-            return f'{prefix}/{transform_name}_{filename}'
-        return get_temp_file()
+    def get_temp_file(self) -> str:
+        return get_temp_file(prefix=self.__name__)
     
     def remove_source(self) -> None:
         self.source_node.truncate()
@@ -137,15 +122,15 @@ class UnzipTransform(CLIBaseTransform):
 class Transformer:
     def __init__(self, transforms: List[Type[Transform]], remove_source=True, debug=False):
         self.transforms = transforms
-        self.debug = debug
         self.remove_source = remove_source
+        self.debug = debug
 
     def transformed_node(self, root: FileNode) -> FileNode:
         return reduce(lambda node, T: self.apply(node, T), [root] + self.transforms)
      
     def apply(self, node, T) -> FileNode:
         print('Applying ' + T.__name__)
-        initial = T(node, self.debug)                   # Transform object
+        initial = T(node, debug=self.debug)                   # Transform object
         output_file_node = initial.transform()          # FileNode object
         if self.remove_source:
             initial.remove_source()
@@ -161,7 +146,7 @@ class APISource:
         self.transformer = transformer
         self.name = name
     
-    def download(self):
+    def download(self) -> FileNode:
         resp = requests.get(self.url)
         is_valid = self.validator.is_resp_valid(resp)
 
@@ -178,6 +163,22 @@ class APISource:
         return self.transformer.transformed_node(root=self.download())
    
 
+class Listing:
+    def __init__(self, url: str):
+        self.url = url
+    
+    def download(self) -> FileNode:
+        resp = requests.get(self.url)
+        if resp.status_code != 200:
+            raise Exception('Failed request for ' + listing.name)
+
+        filepath = get_temp_file()
+        with open(filepath, 'wb') as f:
+            f.write(resp.content)
+
+        return FileNode(filepath=filepath)
+
+
 class Index:
     def __init__(self, url: str, validator: Validator, transformer: Transformer):
         # index url, e.g. apache folder
@@ -192,53 +193,18 @@ class Index:
         '''
         raise NotImplementedError
 
-    def aggregate(self, aggregator) -> FileNode:
-        nodes = map(lambda listing: self.transform(listing), filter(self.validator.is_valid, self.listings))
-        result = reduce(aggregator, nodes)
+    def aggregate(self, aggregator, *args, **kwargs) -> FileNode:
+        nodes = self.transform_index()
+        result = aggregator(*args, nodes=nodes, **kwargs)
 
         return result
     
-    def download_listing(self, listing: Listing) -> FileNode:
-        resp = requests.get(listing.full_url)
-        if resp.status_code != 200:
-            raise Exception('Failed request for ' + listing.name)
-
-        filepath = get_temp_file()
-        with open(filepath, 'wb') as f:
-            f.write(resp.content)
-
-        return FileNode(filepath=filepath)
-    
-    def transform(self, listing: Listing) -> FileNode:
+    def transform_node(self, listing: Listing) -> FileNode:
         return self.transformer.transformed_node(root=self.download_listing(listing))
-
-
-class ApacheListing(Listing):
-    def __init__(self, listing, base_url: str):
-        self.name = listing.name
-        self.modified = listing.modified
-        self.size = listing.size
-        self.description = listing.description
-        self.base_url = base_url
-
-        if base_url[-1] != '/':
-            base_url += '/'
-        self.full_url = base_url + self.name
-
-    @classmethod
-    def format(cls, listings, url: str) -> List[Listing]:
-        return [cls(listing=listing, base_url=url) for listing in listings]
-
-
-class ApacheIndex(Index):
-    def fetch_listings(self):
-        cwd, listings = htmllistparse.fetch_listing(self.url, timeout=30)
-        self.cwd = cwd
-        self.listings = ApacheListing.format(listings, self.url)
     
-    def get_aggregate(self, aggregator):
-        self.fetch_listings()
-        return self.aggregate(aggregator)
+    def transform_index(self) -> List[FileNode]:
+        nodes = map(lambda listing: self.transform_node(listing), filter(self.validator.is_valid, self.listings))
+        return nodes
 
 
 class SimpleS3Bucket:
